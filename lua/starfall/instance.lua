@@ -54,15 +54,15 @@ function SF.Instance:runWithOps(func,...)
 	local oldSysTime = SysTime()
 
 	local function cpuCheck ()
-		self.cpuTime.current =  SysTime() - oldSysTime
+		local dt = SysTime() - oldSysTime
+		self.cpuTime.curr = self.cpuTime.curr + dt
 
-		local ind = self.cpuTime.bufferI
-		self.cpuTime.buffer[ ind ] = self.cpuTime.current
-
-		if self.cpuTime:getBufferAverage() > SF.cpuQuota:GetFloat() then
+		if self.cpuTime.disposition + ( self.cpuTime.curr - self.cpuTime.limit ) > self.cpuTime.n * self.cpuTime.limit then
 			debug.sethook( nil )
-			SF.throw( "CPU Quota exceeded.", 0, true )
+			SF.throw( "CPU Quota Exceeded!", 0, true )
 		end
+
+		oldSysTime = SysTime()
 	end
 
 	debug.sethook( cpuCheck, "", 500 )
@@ -95,6 +95,40 @@ function SF.Instance:cleanup(hook, name, ok, errmsg)
 	SF.instance = nil
 end
 
+do
+
+	-- Define our convars for limit and n
+	-- CLIENTSIDE only implies screens, higher value for these as you usually
+	-- get more performance out of clients than servers.
+
+	if SERVER then
+		CreateConVar( "sf_disposition_limit", 0.004, {}, "Default disposition limit for the serverside" )
+		CreateConVar( "sf_disposition_n", 2, {}, "Default n value for disposition on the serverside.")
+	else
+		CreateClientConVar( "sf_disposition_limit", 0.015, false, false )
+		CreateClientConVar( "sf_disposition_n", 2, false, false )
+	end
+
+	-- Callbacks to modify existing chip instances should the limit and n values change
+	-- @param n Convar Name
+	-- @param o Old_value
+	-- @param u Updated_value
+	cvars.AddChangeCallback( "sf_disposition_limit", function ( n, o, u )
+		for _, v in pairs( SF.allInstances ) do
+			v.cpuTime.limit = u 
+		end
+	end )
+
+	cvars.AddChangeCallback( "sf_disposition_n", function ( n, o, u )
+		for _, v in pairs( SF.allInstances ) do
+			v.cpuTime.n = u
+		end
+	end )
+
+
+
+end
+
 --- Runs the scripts inside of the instance. This should be called once after
 -- compiling/unpacking so that scripts can register hooks and such. It should
 -- not be called more than once.
@@ -105,19 +139,11 @@ function SF.Instance:initialize()
 	assert(not self.initialized, "Already initialized!")
 	self.initialized = true
 	self.cpuTime = {
-		buffer = {},
-		bufferI = 1,
-		current = 0
-	} -- CPU Time Buffer
-
-	local ins = self
-	function self.cpuTime:getBufferAverage ()
-		local r = 0
-		for _, v in pairs( self.buffer ) do
-			r = r + v
-		end
-		return r / ins.context.cpuTime:getBufferN()
-	end
+		disposition = 0,
+		n = GetConVar( "sf_disposition_n" ) and GetConVar( "sf_disposition_n"):GetInt() or 2,
+		limit = GetConVar( "sf_dispoition_limit" ) and GetConVar( "sf_disposition_limit" ):GetFloat() or 0.0369,
+		curr = 0
+	} -- CPU Time Struct
 
 	self:runLibraryHook("initialize")
 	self:prepare("_initialize","_initialize")
@@ -288,9 +314,14 @@ function SF.Instance:Error(msg,traceback)
 	self:deinitialize()
 end
 
---- Updates the buffer index for the CPU Time buffer.
-function SF.Instance:updateCPUBuffer ()
-	self.cpuTime.current = 0
-	self.cpuTime.bufferI = ( self.cpuTime.bufferI % self.context.cpuTime.getBufferN() ) + 1
-	self.cpuTime.buffer[ self.cpuTime.bufferI ] = 0
+-- Sets the instance cpuTime variable to 0.
+function SF.Instance:updateCPUTime ()
+	self.cpuTime.disposition = self.cpuTime.disposition + ( self.cpuTime.curr - self.cpuTime.limit )
+	if self.cpuTime.disposition < -self.cpuTime.n*self.cpuTime.limit then
+		self.cpuTime.disposition = -self.cpuTime.n*self.cpuTime.limit
+	end
+	if self.cpuTime.disposition > self.cpuTime.n * self.cpuTime.limit then
+		SF.throw( "CPU Quota Exceeded!", 0, true )
+	end
+	self.cpuTime.curr = 0
 end

@@ -5,7 +5,7 @@ ENT.RenderGroup = RENDERGROUP_OPAQUE
 include( "starfall/SFLib.lua" )
 assert( SF, "Starfall didn't load correctly!" )
 
-local context = SF.CreateContext( nil, nil, nil, SF.Libraries.CreateLocalTbl{"render"} )
+local context = SF.CreateContext( nil, nil, SF.Libraries.CreateLocalTbl{"render"} )
 
 surface.CreateFont( "Starfall_ErrorFont", {
 	font = "arial",
@@ -95,7 +95,7 @@ function ENT:Think ()
 	self:NextThink( CurTime() )
 	
 	if self.instance and not self.instance.error then
-		self.instance:updateCPUBuffer()
+		self.instance:updateCPUTime()
 		self:runScriptHook( "think" )
 	end
 end

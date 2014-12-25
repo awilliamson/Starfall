@@ -62,22 +62,33 @@ include( "database.lua" )
 include( "permissions/core.lua" )
 include( "editor.lua" )
 
-SF.cpuBufferN = CreateConVar( "sf_timebuffersize", 16, { FCVAR_REPLICATED }, "Default number of elements for the CPU Quota Buffer." )
+-- TODO: Move sf_disposition convar system into instance.lua, as it's included above.
+-- Principal of locality, keep related items together, saves time and effort on debug?
+-- Instance is shared as well, I see no downside.
 
--- We need to make sure that we clear the table if we shrink it, otherwise leftover values will affect the avg.
-cvars.AddChangeCallback( "sf_timebuffersize", function ( n, o, u )
-	if o > u then
-		for _, v in pairs( SF.allInstances ) do
-			v.cpuTime.buffer = {}
-		end
-	end
-end )
-
-if SERVER then
-	SF.cpuQuota = CreateConVar( "sf_timebuffer", 0.004, {}, "Default CPU Time Quota for serverside." )
-else
-	SF.cpuQuota = CreateClientConVar( "sf_timebuffer", 0.015, false, false )
-end
+-- Updates all instance information when convar is changed.
+-- TODO: Check how this behaves on local setting, as SF.allInstances 'should' be server.
+--cvars.AddChangeCallback( "sf_disposition_limit", function ( n, o, u )
+--	for _, v in pairs( SF.allInstances ) do
+--		v.cpuTime.limit = u 
+--	end
+--end )
+--
+---- Updates all instance information when convar is changed
+---- TODO: Check how this behaves on local setting, as SF.allInstances 'should' be server.
+--cvars.AddChangeCallback( "sf_disposition_n", function ( n, o, u )
+--	for _, v in pairs( SF.allInstances ) do
+--		v.cpuTime.n = u
+--	end
+--end )
+--
+--if SERVER then
+--	CreateConVar( "sf_disposition_limit", 0.004, {}, "Default disposition limit for the serverside" )
+--	CreateConVar( "sf_disposition_n", 2, {}, "Default n value for disposition on the serverside.")
+--else
+--	CreateClientConVar( "sf_disposition_limit", 0.015, false, false )
+--	CreateClientConVar( "sf_disposition_n", 2, false, false )
+--end
 
 
 local dgetmeta = debug.getmetatable
@@ -164,16 +175,11 @@ end
 --- Creates a new context. A context is used to define what scripts will have access to.
 -- @param env The environment metatable to use for the script. Default is SF.DefaultEnvironmentMT
 -- @param directives Additional Preprocessor directives to use. Default is an empty table
--- @param ops Operations quota function. Default is specified by the convar "sf_defaultquota" and returned when calling ops()
 -- @param libs Additional (local) libraries for the script to access. Default is an empty table.
-function SF.CreateContext ( env, directives, cpuTime, libs )
+function SF.CreateContext ( env, directives, libs )
 	local context = {}
 	context.env = env or SF.DefaultEnvironmentMT
 	context.directives = directives or {}
-	context.cpuTime = cpuTime or {
-		getBufferN = function () return SF.cpuBufferN:GetInt() or 3 end,
-		getMax = function () return SF.cpuQuota:GetFloat() end
-	}
 	context.libs = libs or {}
 	return context
 end

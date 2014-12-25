@@ -114,20 +114,18 @@ SF.DefaultEnvironment.SERVER = SERVER
 -- If used on screens, will show 0 if only rendering is done. Operations must be done in the Think loop for them to be counted.
 -- @return Current quota used this Think
 function SF.DefaultEnvironment.quotaUsed ()
-	return SF.instance.cpuTime.current
-end
-
---- Gets the Average CPU Time in the buffer
--- @return Average CPU Time of the buffer.
-function SF.DefaultEnvironment.quotaAverage ()
-	return SF.instance.cpuTime:getBufferAverage()
+	return SF.instance.cpuTime.curr
 end
 
 --- Gets the CPU Time max.
 -- CPU Time is stored in a buffer of N elements, if the average of this exceeds quotaMax, the chip will error.
 -- @return Max SysTime allowed to take for execution of the chip in a Think.
 function SF.DefaultEnvironment.quotaMax ()
-	return SF.instance.context.cpuTime.getMax()
+	return SF.instance.cpuTime.limit
+end
+
+function SF.DefaultEnvironment.getDisposition ()
+	return table.Copy( SF.instance.cpuTime )
 end
 
 -- The below modules have the Gmod functions removed (the ones that begin with a capital letter),
