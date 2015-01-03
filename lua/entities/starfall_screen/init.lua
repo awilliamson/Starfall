@@ -84,24 +84,31 @@ end
 
 function ENT:CodeSent(ply, files, mainfile)
 	if ply ~= self.owner then return end
-	local update = self.mainfile ~= nil
+--	local update = self.mainfile ~= nil
 
 	self.files = files
 	self.mainfile = mainfile
 	screens[self] = self
 
-	if update then
-		net.Start("starfall_screen_update")
-			net.WriteEntity(self)
-			for k,v in pairs(files) do
-				net.WriteBit(false)
-				net.WriteString(k)
-				net.WriteString(util.CRC(v))
-			end
-			net.WriteBit(true)
+
+	if self.mainfile ~= nil then
+		net.Start( "starfall_screen_update" )
+			net.WriteEntity( self )
 		net.Broadcast()
-		--sendScreenCode(self, ply, files, mainfile)
 	end
+
+--	if update then
+--		net.Start("starfall_screen_update")
+--			net.WriteEntity(self)
+--			for k,v in pairs(files) do
+--				net.WriteBit(false)
+--				net.WriteString(k)
+--				net.WriteString(util.CRC(v))
+--			end
+--			net.WriteBit(true)
+--		net.Broadcast()
+--		--sendScreenCode(self, ply, files, mainfile)
+--	end
 
 	local ppdata = {}
 	SF.Preprocessor.ParseDirectives(mainfile, files[mainfile], {}, ppdata)

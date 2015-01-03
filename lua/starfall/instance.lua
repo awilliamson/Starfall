@@ -110,6 +110,9 @@ function SF.Instance:initialize()
 		current = 0
 	} -- CPU Time Buffer
 
+	-- This is used for checking if an instance is 'dirty', used for file checking.
+	self.hashes = {}
+
 	local ins = self
 	function self.cpuTime:getBufferAverage ()
 		local r = 0
@@ -272,8 +275,8 @@ end
 --- Deinitializes the instance. After this, the instance should be discarded.
 function SF.Instance:deinitialize()
 	self:runLibraryHook("deinitialize")
-	SF.allInstances[self] = nil
-	self.error = true
+	--SF.allInstances[self] = nil
+	--self.error = true
 end
 
 --- Errors the instance. Should only be called from the tips of the call tree (aka from places such as the hook library, timer library, the entity's think function, etc)

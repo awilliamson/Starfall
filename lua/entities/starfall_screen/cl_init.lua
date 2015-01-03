@@ -14,13 +14,14 @@ surface.CreateFont( "Starfall_ErrorFont", {
 } )
 
 
-local dlScreen = nil
-local dlOwner = nil
-local dlMain = nil
-local dlFiles = nil
-local hashes = {}
+--local dlScreen = nil
+--local dlOwner = nil
+--local dlMain = nil
+--local dlFiles = nil
+--local hashes = {}
 
 net.Receive( "starfall_screen_download", function ( len )
+
 	if not dlScreen then
 		dlScreen = net.ReadEntity()
 		dlOwner = net.ReadEntity()
@@ -46,26 +47,22 @@ net.Receive( "starfall_screen_update", function ( len )
 	local screen = net.ReadEntity()
 	if not IsValid( screen ) then return end
 
-	local dirty = false
 	local finish = net.ReadBit()
 
-	while finish == 0 do
-		local file = net.ReadString()
-		local hash = net.ReadString()
+	--while finish == 0 do
+	--	local file = net.ReadString()
+	--	local hash = net.ReadString()
 
-		if hash ~= hashes[ file ] then
-			dirty = true
-			hashes[ file ] = hash
-		end
-		finish = net.ReadBit()
-	end
-	if dirty then
-		net.Start( "starfall_screen_download" )
-			net.WriteEntity( screen )
-		net.SendToServer()
-	else
-		screen:CodeSent( screen.files, screen.mainfile, screen.owner )
-	end
+	--	if hash ~= screen.instance.hashes[ file ] then
+	--		dirty = true
+	--		screen.instance.hashes[ file ] = hash
+	--	end
+	--	finish = net.ReadBit()
+	--end
+
+	net.Start( "starfall_screen_download" )
+		net.WriteEntity( screen )
+	net.SendToServer()
 end )
 
 net.Receive( "starfall_screen_used", function ( len )
