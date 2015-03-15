@@ -72,7 +72,7 @@ function ENT:Think ()
 	return true
 end
 
-function ENT:OnRemove ()
+function ENT:OnRemove ( )
 	self.BaseClass.OnRemove( self )
 end
 
