@@ -59,12 +59,13 @@ function SF.Instance:runWithOps ( func, ... )
 			end
 		end
 		err = tostring( err )
-		traceback = debug.traceback( err, 2 )
+		traceback = debug.traceback( err, 2 ) --- TODO - Check if this traceback is actually called properly?
 		return err
 	end
 
 	local oldSysTime = SysTime()
 
+	--- TODO: Encapsulate cpuCheck in an external file which instance includes and utilises?
 	local function cpuCheck ()
 		self.cpuTime.current = SysTime() - oldSysTime
 
@@ -158,17 +159,39 @@ function SF.Instance:initialize ()
 	return true
 end
 
+local function iterTbl( self, forRes, hook, ... )
+	for ok, err_or_tbl, traceback in self:iterTblScriptHook( hook, ... ) do
+		if not ok then return false, err_or_tbl, traceback
+		elseif forRes then
+			if err_or_tbl and type( err_or_tbl ) == "table" and err_or_tbl[1] then
+				return true, unpack( err_or_tbl )
+			end
+		end
+	end
+	return true
+end
+
+-- IterTblScriptHook is only used by these instance functions, it can be refactored and localised.
+-- Likewise the the IterScriptHook variant can be removed, they differ only slightly, and functionality is never used.
+function SF.Instance:runScriptHook ( hook, ... )
+	return iterTbl( self, false, hook, ... )
+end
+
+function SF.Instance:runScriptHookForResult ( hook, ... )
+	return iterTbl( self, true, hook, ... )
+end
+
 --- Runs a script hook. This calls script code.
 -- @param hook The hook to call.
 -- @param ... Arguments to pass to the hook's registered function.
 -- @return True if it executed ok, false if not or if there was no hook
 -- @return If the first return value is false then the error message or nil if no hook was registered
-function SF.Instance:runScriptHook ( hook, ... )
+--[[function SF.Instance:runScriptHook ( hook, ... )
 	for ok, err, traceback in self:iterTblScriptHook( hook, ... ) do
 		if not ok then return false, err, traceback end
 	end
 	return true
-end
+end]]
 
 --- Runs a script hook until one of them returns a true value. Returns those values.
 -- @param hook The hook to call.
@@ -176,7 +199,7 @@ end
 -- @return True if it executed ok, false if not or if there was no hook
 -- @return If the first return value is false then the error message or nil if no hook was registered. Else any values that the hook returned.
 -- @return The traceback if the instance errored
-function SF.Instance:runScriptHookForResult ( hook, ... )
+--[[function SF.Instance:runScriptHookForResult ( hook, ... )
 	for ok, tbl, traceback in self:iterTblScriptHook( hook, ... ) do
 		if not ok then return false, tbl, traceback
 		elseif tbl and tbl[ 1 ] then
@@ -184,7 +207,7 @@ function SF.Instance:runScriptHookForResult ( hook, ... )
 		end
 	end
 	return true
-end
+end]]
 
 -- Some small efficiency thing
 local noop = function () end
@@ -194,7 +217,7 @@ local noop = function () end
 -- @param ... Arguments to pass to the hook's registered function.
 -- @return An iterator function returning the ok status, and then either the hook
 -- results or the error message and traceback
-function SF.Instance:iterScriptHook ( hook, ... )
+--[[function SF.Instance:iterScriptHook ( hook, ... )
 	local hooks = self.hooks[ hook:lower() ]
 	if not hooks then return noop end
 	local index
@@ -217,7 +240,7 @@ function SF.Instance:iterScriptHook ( hook, ... )
 		self:cleanup( hook, name, false )
 		return true, unpack( tbl )
 	end
-end
+end]]
 
 --- Like SF.Instance:iterSciptHook, except that it doesn't unpack the hook results.
 -- @param ... Arguments to pass to the hook's registered function.
@@ -274,10 +297,12 @@ function SF.Instance:runFunction ( func, ... )
 	return true, unpack( tbl )
 end
 
+--- TODO: REMOVE THIS. It's never used, the runFunction is only ever called once within http library.
+--- We don't need variants that are pack/unpacks of each other.
 --- Exactly the same as runFunction except doesn't unpack the return values
 -- @param func Function to run
 -- @param ... Arguments to pass to func
-function SF.Instance:runFunctionT ( func, ... )
+--[[function SF.Instance:runFunctionT ( func, ... )
 	self:prepare( "_runFunction", func )
 	
 	local ok, tbl, traceback = self:runWithOps( func, ... )
@@ -290,6 +315,7 @@ function SF.Instance:runFunctionT ( func, ... )
 	self:cleanup( "_runFunction", func, false )
 	return true, tbl
 end
+]]
 
 --- Deinitializes the instance. After this, the instance should be discarded.
 function SF.Instance:deinitialize ()

@@ -5,11 +5,13 @@
 if SF ~= nil then return end
 SF = {}
 
-jit.off() -- Needed so ops counting will work reliably.
+jit.on() -- Needed so ops counting will work reliably. -- TODO: Is this really needed? I thought JIT got disabled in GMod by default? Does this cause any issues with ops counting?
 
+--- TODO: Remove this immature comment below
 -- Do a couple of checks for retarded mods that disable the debug table
 -- and run it after all addons load
 do
+	--- TODO: zassert usage is counterintuitive?
 	local function zassert(  cond, str )
 		if not cond then error( "STARFALL LOAD ABORT: " .. str, 0 ) end
 	end
@@ -24,6 +26,7 @@ do
 	-- Check for modified setfenv
 	info = debug.getinfo( debug.setfenv, "S" )
 	zassert( info.what == "C", "debug.setfenv modified" )
+	--- TODO: Check for modified getfenv maybe? Not exactly required as we use standard getfenv. Check for that?
 
 	-- Check get/setmetatable
 	info = debug.getinfo( debug.getmetatable )
@@ -32,7 +35,7 @@ do
 	zassert( info.what == "C", "debug.setmetatable modified" )
 
 	-- Lock the debug table
-	local olddebug = debug
+	local olddebug = debug -- TODO: Make this a little more mature?
 	debug = setmetatable( {}, {
 		__index = olddebug,
 		__newindex = function ( self, k, v ) print( "Addon tried to modify debug table" ) end,
@@ -51,7 +54,7 @@ if SERVER then
 	AddCSLuaFile( "permissions/core.lua" )
 	AddCSLuaFile( "editor.lua" )
 	AddCSLuaFile( "sfderma.lua" )
-	AddCSLuaFile( "callback.lua" )
+	--AddCSLuaFile( "callback.lua" ) -- TODO: Remove callback, we don't use it?
 	AddCSLuaFile( "sfhelper.lua" )
 end
 
@@ -60,11 +63,12 @@ include( "compiler.lua" )
 include( "instance.lua" )
 include( "libraries.lua" )
 include( "preprocessor.lua" )
-include( "database.lua" )
+--include( "database.lua" ) -- TODO: Remove callback, we don't use it?
 include( "permissions/core.lua" )
 include( "editor.lua" )
 include( "sfhelper.lua" )
 
+-- TODO: Move this with the encapsulated cpuTime stuff.
 SF.cpuBufferN = CreateConVar( "sf_timebuffersize", 16, { FCVAR_REPLICATED }, "Default number of elements for the CPU Quota Buffer." )
 
 -- We need to make sure that we clear the table if we shrink it, otherwise leftover values will affect the avg.
@@ -135,12 +139,13 @@ function SF.Typedef ( name, supermeta )
 	return methods, metamethods
 end
 
+--- TODO: Encapsulate SF.Types if we create a outward facing accessor.
 function SF.GetTypeDef( name )
 	return SF.Types[ name ]
 end
 
 -- Include this file after Typedef as this file relies on it.
-include( "callback.lua" )
+--include( "callback.lua" ) -- TODO: Remove callback, we don't use it?
 
 do
 	local env, metatable = SF.Typedef( "Environment" )
@@ -154,6 +159,8 @@ end
 -- Instances are put here after initialization.
 SF.allInstances = setmetatable( {},{ __mode = "kv" } )
 
+--- TODO: We have so many 'RunScriptHook' calls everywhere. On the Ent, Instance, SFLib. Some of them don't interact properly. Streamline this!
+--- TODO: This function is never even called from anywhere, functionality which exists here is put on the Entities and ran anyway!
 --- Calls a script hook on all processors.
 function SF.RunScriptHook ( hook, ... )
 	for _, instance in pairs( SF.allInstances ) do
@@ -319,6 +326,9 @@ end
 
 local wrappedfunctions = setmetatable( {}, { __mode = "kv" } )
 local wrappedfunctions2instance = setmetatable( {}, { __mode = "kv" } )
+
+--- TODO: Never called!
+
 --- Wraps the given starfall function so that it may called directly by GMLua
 -- @param func The starfall function getting wrapped
 -- @param instance The instance the function originated from
@@ -334,6 +344,8 @@ function SF.WrapFunction ( func, instance )
 	
 	return returned_func
 end
+
+--- TODO: Never called!
 
 --- Gets the instance a wrapped function is bound to
 -- @param func Function
@@ -432,11 +444,13 @@ local function clampPos ( pos )
 	return pos
 end
 
+--- TODO: Move this to entities, only ever called from there. Should not be an SFLib thing!
 function SF.setPos ( ent, pos )
 	if isnan( pos.x ) or isnan( pos.y ) or isnan( pos.z ) then return end
 	return ent:SetPos( clampPos( pos ) )
 end
 
+--- TODO: Move this to entities, only ever called from there. Should not be an SFLib thing!
 local huge, abs = math.huge, math.abs
 function SF.setAng ( ent, ang )
 	if isnan( ang.pitch ) or isnan( ang.yaw ) or isnan( ang.roll ) then return end
@@ -449,6 +463,8 @@ end
 local serialize_replace_regex = "[\"\n]"
 local serialize_replace_tbl = { [ "\n" ] = string.char( 5 ), [ '"' ] = string.char( 4 ) }
 
+--- TODO: Move this to instance, as it relates to instances and is only ever implemented by entities, such as proc and screen.
+
 --- Serializes an instance's code in a format compatible with the duplicator library
 -- @param sources The table of filename = source entries. Ususally instance.source
 -- @param mainfile The main filename. Usually instance.mainfile
@@ -460,6 +476,8 @@ function SF.SerializeCode ( sources, mainfile )
 	rt.mainfile = mainfile
 	return rt
 end
+
+--- TODO: Move this to instance, as it relates to instances and is only ever implemented by entities, such as proc and screen.
 
 local deserialize_replace_regex = "[" .. string.char( 5 ) .. string.char( 4 ) .. "]"
 local deserialize_replace_tbl = { [ string.char( 5 )[ 1 ] ] = "\n", [ string.char( 4 )[ 1 ] ] = '"' }
@@ -612,6 +630,8 @@ if SERVER then
 
 		error( msg )
 	end
+
+	--- TODO: Seems messy to have direct entity handling within sflib. Maybe this should be delegated or encapsulated elsewhere in a Factory which deals with instance spawning and linking to physical representations?
 
 	--- Creates a SF of the given type.
 	-- Used for starfall_processor & starfall_screen
